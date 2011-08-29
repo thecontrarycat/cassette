@@ -1,9 +1,16 @@
-﻿using System;
+﻿// BIG FAT WARNING!
+// This is just temporary spike code I've knocked together for my own immediate needs!
+// Use at your own risk ;)
+
+using System;
+using System.Collections.Generic;
 using System.IO;
-using System.Linq;
-using Cassette.Assets.Scripts;
-using Cassette.CoffeeScript;
-using Cassette.ModuleBuilding;
+using System.Reflection;
+using Cassette.HtmlTemplates;
+using Cassette.ModuleProcessing;
+using Cassette.Scripts;
+using Cassette.Stylesheets;
+using NConsoler;
 
 namespace Cassette.Shell
 {
@@ -11,40 +18,148 @@ namespace Cassette.Shell
     {
         static void Main(string[] args)
         {
-            if (args.Length == 0)
+            Consolery.Run(typeof(Program), args);
+        }
+
+        [Action]
+        public static void Go(
+            [Required(Description = "Path to asset directory.")] string source,
+            [Required(Description = "Output directory")] string destination,
+            [Required(Description = "The type of asset module to create (Script, Stylesheet or HtmlTemplate).")] string type,
+            [Optional(true)] bool single
+        )
+        {
+            source = Path.GetFullPath(source);
+            destination = Path.GetFullPath(destination);
+            var app = new Application(source);
+            
+            var goMethod = typeof(Program).GetMethod("Go" + type, BindingFlags.Static | BindingFlags.Public);
+            if (goMethod == null)
             {
-                Console.WriteLine("Usage: cassette {path} {output-directory}");
+                Console.Error.WriteLine("Invalid module type. Valid types are Script, Stylesheet and HtmlTemplate.");
                 return;
             }
-            var path = args[0];
-            if (path.EndsWith("*"))
+
+            goMethod.Invoke(null, new object[] { source, destination, app, single });
+        }
+
+        public static void GoScript(string sourceDirectory, string destinationDirectory, ICassetteApplication application, bool single)
+        {
+            FileSystemModuleSource<ScriptModule> source;
+            if (single) 
+                source = new DirectorySource<ScriptModule>(sourceDirectory);
+            else 
+                source = new PerSubDirectorySource<ScriptModule>(sourceDirectory);
+
+            source.FilePattern = "*.js;*.coffee";
+
+            var modules = source.GetModules(new ScriptModuleFactory(), application);
+            if (single)
+                OutputModules(destinationDirectory, Path.GetFileName(sourceDirectory) + ".js", application, modules);
+            else
+                OutputModules(destinationDirectory, "{0}.js", application, modules);
+        }
+
+        public static void GoStylesheet(string sourceDirectory, string destinationDirectory, ICassetteApplication application, bool single)
+        {
+            FileSystemModuleSource<StylesheetModule> source;
+            if (single)
+                source = new DirectorySource<StylesheetModule>(sourceDirectory);
+            else
+                source = new PerSubDirectorySource<StylesheetModule>(sourceDirectory);
+
+            source.FilePattern = "*.css;*.less";
+
+            var modules = source.GetModules(new StylesheetModuleFactory(), application);
+            if (single)
+                OutputModules(destinationDirectory, Path.GetFileName(sourceDirectory) + ".css", application, modules);
+            else
+                OutputModules(destinationDirectory, "{0}.css", application, modules);
+        }
+
+        public static void GoHtmlTemplate(string sourceDirectory, string destinationDirectory, ICassetteApplication application, bool single)
+        {
+            FileSystemModuleSource<HtmlTemplateModule> source;
+            if (single)
+                source = new DirectorySource<HtmlTemplateModule>("");
+            else
+                source = new PerSubDirectorySource<HtmlTemplateModule>("");
+
+            source.FilePattern = "*.htm;*.html";
+            source.CustomizeModule = m => m.Processor = new Pipeline<HtmlTemplateModule>(
+                new AddTransformerToAssets(
+                    new CompileAsset(new KnockoutJQueryTmplCompiler())
+                ),
+                new ConcatenateAssets()
+            );
+
+            var modules = source.GetModules(new HtmlTemplateModuleFactory(), application);
+            if (single)
+                OutputModules(destinationDirectory, Path.GetFileName(sourceDirectory) + ".js", application, modules);
+            else
+                OutputModules(destinationDirectory, "{0}.js", application, modules);
+        }
+
+        static void OutputModules(string destinationDirectory, string filenamePattern, ICassetteApplication application, IEnumerable<Module> modules)
+        {
+            foreach (var module in modules)
             {
-                path = Path.GetFullPath(path.Substring(0, path.Length - 2)) + "\\";
-                var builder = new ScriptModuleContainerBuilder(null, path, new CoffeeScriptCompiler(File.ReadAllText));
-                builder.AddModuleForEachSubdirectoryOf("", "");
-                var container = builder.Build();
-                foreach (var module in container)
+                module.Process(application);
+
+                using (var stream = module.Assets[0].OpenStream())
                 {
-                    var outputFilename = Path.GetFullPath(Path.Combine(args[1], module.Path + ".js"));
-                    using (var file = new StreamWriter(outputFilename))
+                    var file = new FileInfo(Path.Combine(destinationDirectory, string.Format(filenamePattern, module.Path)));
+                    if (!file.Directory.Exists)
                     {
-                        var writer = new ScriptModuleWriter(file, path, File.ReadAllText, new CoffeeScriptCompiler(File.ReadAllText));
-                        writer.Write(module);
-                        file.Flush();
+                        file.Directory.Create();
+                    }
+                    using (var fileStream = file.Open(FileMode.Create, FileAccess.Write))
+                    {
+                        stream.CopyTo(fileStream);
+                        fileStream.Flush();
                     }
                 }
             }
-            else
-            {
-                path = Path.GetFullPath(path);
-                var builder = new UnresolvedScriptModuleBuilder(path);
-                var unresolvedModule = builder.Build("", null); // path is the module, so no extra path is required.
-                var module = UnresolvedModule.ResolveAll(new[] { unresolvedModule }).First();
+        }
+    }
 
-                var writer = new ScriptModuleWriter(Console.Out, path, File.ReadAllText, new CoffeeScriptCompiler(File.ReadAllText));
-                writer.Write(module);
+    class Application : ICassetteApplication
+    {
+        readonly FileSystem rootDirectory;
+
+        public Application(string path)
+        {
+            rootDirectory = new FileSystem(path);
+            IsOutputOptimized = true;
+        }
+
+        public IFileSystem RootDirectory
+        {
+            get { return rootDirectory; }
+        }
+
+        public bool IsOutputOptimized { get; set; }
+
+        public IUrlGenerator UrlGenerator
+        {
+            get
+            {
+                throw new NotImplementedException();
+            }
+            set
+            {
+                throw new NotImplementedException();
             }
         }
 
+        public UI.IPageAssetManager GetPageAssetManager<T>() where T : Module
+        {
+            throw new NotImplementedException();
+        }
+
+        public void Dispose()
+        {
+        }
     }
+
 }
