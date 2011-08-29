@@ -11,6 +11,7 @@ using Cassette.ModuleProcessing;
 using Cassette.Scripts;
 using Cassette.Stylesheets;
 using NConsoler;
+using System.Text;
 
 namespace Cassette.Shell
 {
@@ -69,6 +70,7 @@ namespace Cassette.Shell
                 source = new PerSubDirectorySource<StylesheetModule>(sourceDirectory);
 
             source.FilePattern = "*.css;*.less";
+            source.CustomizeModule = m => m.Processor = new StylesheetPipeline().Remove<ExpandCssUrls>();
 
             var modules = source.GetModules(new StylesheetModuleFactory(), application);
             if (single)
@@ -107,6 +109,7 @@ namespace Cassette.Shell
                 module.Process(application);
 
                 using (var stream = module.Assets[0].OpenStream())
+                using (var reader = new StreamReader(stream))
                 {
                     var file = new FileInfo(Path.Combine(destinationDirectory, string.Format(filenamePattern, module.Path)));
                     if (!file.Directory.Exists)
@@ -114,9 +117,14 @@ namespace Cassette.Shell
                         file.Directory.Create();
                     }
                     using (var fileStream = file.Open(FileMode.Create, FileAccess.Write))
+                    using (var writer = new StreamWriter(fileStream, Encoding.UTF8))
                     {
-                        stream.CopyTo(fileStream);
-                        fileStream.Flush();
+                        string line;
+                        while ((line = reader.ReadLine()) != null)
+                        {
+                            writer.WriteLine(line);
+                        }
+                        writer.Flush();
                     }
                 }
             }
@@ -131,6 +139,7 @@ namespace Cassette.Shell
         {
             rootDirectory = new FileSystem(path);
             IsOutputOptimized = true;
+            UrlGenerator = new UrlGenerator();
         }
 
         public IFileSystem RootDirectory
@@ -140,17 +149,7 @@ namespace Cassette.Shell
 
         public bool IsOutputOptimized { get; set; }
 
-        public IUrlGenerator UrlGenerator
-        {
-            get
-            {
-                throw new NotImplementedException();
-            }
-            set
-            {
-                throw new NotImplementedException();
-            }
-        }
+        public IUrlGenerator UrlGenerator { get; set; }
 
         public UI.IPageAssetManager GetPageAssetManager<T>() where T : Module
         {
@@ -162,4 +161,26 @@ namespace Cassette.Shell
         }
     }
 
+    class UrlGenerator : IUrlGenerator
+    {
+        public string CreateModuleUrl(Module module)
+        {
+            throw new NotImplementedException();
+        }
+
+        public string CreateAssetUrl(Module module, IAsset asset)
+        {
+            throw new NotImplementedException();
+        }
+
+        public string CreateAssetCompileUrl(Module module, IAsset asset)
+        {
+            throw new NotImplementedException();
+        }
+
+        public string CreateImageUrl(string filename, string hash)
+        {
+            return filename.Replace('\\', '/');
+        }
+    }
 }
