@@ -17,6 +17,22 @@ namespace Cassette.Stylesheets
         }
 
         [Fact]
+        public void WhenEmbedMhtmlImages_ThenPipelineContainsCorrectProcessors()
+        {
+            pipeline.EmbedImages(ImageEmbedType.Mhtml);
+            AssertPipelineContains<MhtmlBlockRenderer>();
+            pipeline.CreatedPipeline.OfType<AssignContentType>().ShouldNotBeEmpty();
+        }
+
+        [Fact]
+        public void WhenEmbedMhtmlImagesWithUrlPredicate_ThenPipelineContainsCorrectProcessors()
+        {
+            pipeline.EmbedImages(url => true, ImageEmbedType.Mhtml);
+            AssertPipelineContains<MhtmlBlockRenderer>();
+            pipeline.CreatedPipeline.OfType<AssignContentType>().ShouldNotBeEmpty();
+        }
+
+        [Fact]
         public void WhenEmbedImages_ThenPipelineContainsConvertImageUrlsToDataUris()
         {
             pipeline.EmbedImages();

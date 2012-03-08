@@ -14,8 +14,11 @@ namespace Cassette.Stylesheets
         {
             if (type == ImageEmbedType.Mhtml)
             {
-                // TODO: MHTML support
+                // Stylesheets containing MHTML must be served as message/rfc822
                 pipeline.InsertBefore<ExpandCssUrls>(new AssignContentType("message/rfc822"));
+
+                // MHTML must be added after minification or it won't work
+                pipeline.Append(new MhtmlBlockRenderer());
             }
             else
             {

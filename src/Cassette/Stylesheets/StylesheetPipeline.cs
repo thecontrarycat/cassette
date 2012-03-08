@@ -1,6 +1,7 @@
 ﻿using System.Collections.Generic;
 using Cassette.BundleProcessing;
 using Cassette.Configuration;
+using System;
 
 namespace Cassette.Stylesheets
 {
@@ -16,8 +17,8 @@ namespace Cassette.Stylesheets
         public IAssetTransformer StylesheetMinifier { get; set; }
         public bool CompileLess { get; set; }
         public bool CompileSass { get; set; }
-        // TODO: Obselete this property in next version
-        // Use the EmbedImages extension method instead.
+                
+        [Obsolete("Use EmbedImages() method instead")]
         public bool ConvertImageUrlsToDataUris { get; set; }
 
         protected override IEnumerable<IBundleProcessor<StylesheetBundle>> CreatePipeline(StylesheetBundle bundle, CassetteSettings settings)
@@ -34,7 +35,9 @@ namespace Cassette.Stylesheets
                 yield return new ParseSassReferences();
                 yield return new CompileSass(new SassCompiler());
             }
+#pragma warning disable 618
             if (ConvertImageUrlsToDataUris)
+#pragma warning restore 618
             {
                 yield return new ConvertImageUrlsToDataUris(true); // Default is to support IE8
             }
