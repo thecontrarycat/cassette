@@ -313,6 +313,8 @@
     <Compile Include="ReferenceBuilder.cs" />
     <Compile Include="Stylesheets\CassettePlatformAdaptationLayer.cs" />
     <Compile Include="Stylesheets\CompileSass.cs" />
+    <Compile Include="Stylesheets\ConvertImageUrlsToMhtmlUris.cs" />
+    <Compile Include="Stylesheets\CssImageToMhtmlUriTransformer.cs" />
     <Compile Include="Stylesheets\MhtmlBlockRenderer.cs" />
     <Compile Include="Stylesheets\ParseSassReferences.cs" />
     <Compile Include="Stylesheets\SassCompiler.cs" />

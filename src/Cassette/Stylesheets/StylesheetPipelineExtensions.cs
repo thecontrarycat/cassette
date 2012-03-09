@@ -17,6 +17,8 @@ namespace Cassette.Stylesheets
                 // Stylesheets containing MHTML must be served as message/rfc822
                 pipeline.InsertBefore<ExpandCssUrls>(new AssignContentType("message/rfc822"));
 
+                pipeline.InsertBefore<ExpandCssUrls>(new ConvertImageUrlsToMhtmlUris(shouldEmbedUrl));
+
                 // MHTML must be added after minification or it won't work
                 pipeline.Append(new MhtmlBlockRenderer());
             }

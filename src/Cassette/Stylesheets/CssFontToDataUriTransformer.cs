@@ -28,6 +28,18 @@ namespace Cassette.Stylesheets
             {
             }
 
+            protected override string DataUri
+            {
+                get
+                {
+                    return string.Format(
+                        "data:{0};base64,{1}",
+                        GetContentType(Extension),
+                        GetBase64EncodedData()
+                    );
+                }
+            }
+
             protected override string GetContentType(string extension)
             {
                 return "font/" + extension;

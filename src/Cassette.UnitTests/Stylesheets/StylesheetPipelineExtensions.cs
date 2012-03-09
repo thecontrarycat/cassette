@@ -21,7 +21,8 @@ namespace Cassette.Stylesheets
         {
             pipeline.EmbedImages(ImageEmbedType.Mhtml);
             AssertPipelineContains<MhtmlBlockRenderer>();
-            pipeline.CreatedPipeline.OfType<AssignContentType>().ShouldNotBeEmpty();
+            AssertPipelineContains<ConvertImageUrlsToMhtmlUris>();
+            AssertPipelineContains<AssignContentType>();
         }
 
         [Fact]
@@ -29,7 +30,8 @@ namespace Cassette.Stylesheets
         {
             pipeline.EmbedImages(url => true, ImageEmbedType.Mhtml);
             AssertPipelineContains<MhtmlBlockRenderer>();
-            pipeline.CreatedPipeline.OfType<AssignContentType>().ShouldNotBeEmpty();
+            AssertPipelineContains<ConvertImageUrlsToMhtmlUris>();
+            AssertPipelineContains<AssignContentType>();
         }
 
         [Fact]
@@ -80,9 +82,12 @@ namespace Cassette.Stylesheets
 
         void AssertPipelineContains<T>() where T : IBundleProcessor<Bundle>
         {
-            // MutablePipeline steps are actually created when Process is called.
-            var bundle = new StylesheetBundle("~");
-            pipeline.Process(bundle, new CassetteSettings(""));
+            if (pipeline.CreatedPipeline == null)
+            {
+                // MutablePipeline steps are actually created when Process is called.
+                var bundle = new StylesheetBundle("~");
+                pipeline.Process(bundle, new CassetteSettings(""));
+            }
 
             pipeline.CreatedPipeline.OfType<T>().ShouldNotBeEmpty();
         }

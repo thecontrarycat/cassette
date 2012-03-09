@@ -15,7 +15,7 @@ namespace Cassette.Stylesheets
         {
         }
 
-        public bool UseIE8Truncation
+        internal bool UseIE8Truncation
         {
             get
             {

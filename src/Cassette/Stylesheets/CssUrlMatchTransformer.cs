@@ -24,10 +24,26 @@ namespace Cassette.Stylesheets
         readonly string url;
         readonly string extension;
         readonly IFile file;
-
+        
         public string Url
         {
             get { return url; }
+        }
+
+        protected string Extension
+        {
+            get
+            {
+                return extension;
+            }
+        }
+
+        protected string Path
+        {
+            get
+            {
+                return path;
+            }
         }
 
         protected int MatchIndex
@@ -45,21 +61,11 @@ namespace Cassette.Stylesheets
             get { return file; }
         }
 
-        protected string DataUri
-        {
-            get
-            {
-                return string.Format(
-                    "data:{0};base64,{1}",
-                    GetContentType(extension),
-                    GetBase64EncodedData()
-                );
-            }
-        }
-
+        protected abstract string DataUri {get;}
+        
         protected abstract string GetContentType(string extension);
 
-        string GetBase64EncodedData()
+        protected string GetBase64EncodedData()
         {
             using (var fileStream = file.OpenRead())
             using (var temp = new MemoryStream())
